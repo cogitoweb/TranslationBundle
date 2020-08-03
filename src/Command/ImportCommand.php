@@ -8,18 +8,16 @@ namespace Kilik\TranslationBundle\Command;
 use Kilik\TranslationBundle\Components\CsvLoader;
 use Kilik\TranslationBundle\Services\LoadTranslationService;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
-use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Yaml\Dumper;
 
 /**
  * Class ImportCommand.
  */
-class ImportCommand extends Command
+class ImportCommand extends ContainerAwareCommand
 {
 
     /**
@@ -71,7 +69,7 @@ class ImportCommand extends Command
         $this->input = $input;
         $this->output = $output;
 
-        $fs = new Filesystem();
+        $fs = $this->getContainer()->get('filesystem');
 
         $bundlesNames = explode(',', $input->getOption('bundles'));
         $domains = explode(',', $input->getOption('domains'));
@@ -99,9 +97,9 @@ class ImportCommand extends Command
 
         $allTranslations = $importTranslations;
         // merge translations if we do not overwrite the data
-        if (!$this->input->getOption('overwrite-existing')) {
-            $allTranslations = array_merge_recursive($this->loadService->getTranslations(), $importTranslations);
-        }
+//        if (!$this->input->getOption('overwrite-existing')) {
+//            $allTranslations = array_merge_recursive($this->loadService->getTranslations(), $importTranslations);
+//        }
 
         // rewrite files (Bundle/domain.locale.yml)
         foreach ($allTranslations as $bundleName => $bundleTranslations) {
@@ -112,7 +110,7 @@ class ImportCommand extends Command
                 foreach ($locales as $locale) {
                     // prepare array (only for locale)
                     $localTranslations = [];
-                    foreach ($domainTranslations as $key => $localeTranslation) {
+                    foreach ($domainTranslations  as $key => $localeTranslation) {
                         if (isset($localeTranslation[$locale])) {
                             $this->assignArrayByPath($localTranslations, $key, $localeTranslation[$locale]);
                         }
@@ -160,6 +158,14 @@ class ImportCommand extends Command
         $keys = explode($delimiter, $path);
 
         foreach ($keys as $key) {
+            if ($key === '') {
+                break;
+            }
+
+            if (is_string($arr)) {
+                $arr = [];
+            }
+
             $arr = &$arr[$key];
         }
 
